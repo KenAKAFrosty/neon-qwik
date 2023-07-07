@@ -24,7 +24,7 @@ export default component$(() => {
     <>
       <Hero />
       <button onClick$={() => doDatabaseThing().then(console.log)}>
-        Add a record for funsies
+        Do the database thing
       </button>
       <Starter />
 

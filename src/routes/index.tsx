@@ -3,6 +3,10 @@ if (typeof(global) !== "undefined") {
   global.WebSocket = ws.w3cwebsocket as unknown as typeof WebSocket;
 }
 
+import { Pool } from "@neondatabase/serverless";
+import { drizzle, type NeonClient } from "drizzle-orm/neon-serverless";
+import { pgTable, serial, varchar } from "drizzle-orm/pg-core";
+
 import { component$ } from "@builder.io/qwik";
 import { server$, type DocumentHead } from "@builder.io/qwik-city";
 import Counter from "~/components/starter/counter/counter";
@@ -10,17 +14,13 @@ import Hero from "~/components/starter/hero/hero";
 import Infobox from "~/components/starter/infobox/infobox";
 import Starter from "~/components/starter/next-steps/next-steps";
 
-import { Pool } from "@neondatabase/serverless";
-import { type InferModel } from "drizzle-orm";
-import { drizzle, type NeonClient } from "drizzle-orm/neon-serverless";
-import { pgTable, serial } from "drizzle-orm/pg-core";
 
-
-const users = pgTable('books', {
+const books = pgTable('books', {
   id: serial('id').primaryKey(),
+  title: varchar("title"),
+  author: varchar("author")
 });
 
-export type User = InferModel<typeof users>;
 
 export const doDatabaseThing = server$(async function () {
   const connectionString = this.env.get("DATABASE_URL");
@@ -29,7 +29,7 @@ export const doDatabaseThing = server$(async function () {
   }
   const pool = new Pool({ connectionString });
   const db = drizzle(pool as NeonClient);
-  const result = await db.select().from(users).execute();
+  const result = await db.select().from(books).execute();
   console.log(result);
   return result;
 })

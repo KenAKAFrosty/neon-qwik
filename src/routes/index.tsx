@@ -1,5 +1,5 @@
 import ws from "websocket";
-if (typeof(global) !== "undefined") { 
+if (typeof (global) !== "undefined") {
   global.WebSocket = ws.w3cwebsocket as unknown as typeof WebSocket;
 }
 
@@ -7,7 +7,7 @@ import { Pool } from "@neondatabase/serverless";
 import { drizzle, type NeonClient } from "drizzle-orm/neon-serverless";
 import { pgTable, serial, varchar } from "drizzle-orm/pg-core";
 
-import { component$ } from "@builder.io/qwik";
+import { component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 import { server$, type DocumentHead } from "@builder.io/qwik-city";
 import Counter from "~/components/starter/counter/counter";
 import Hero from "~/components/starter/hero/hero";
@@ -32,15 +32,60 @@ export const doDatabaseThing = server$(async function () {
   const result = await db.select().from(books).execute();
   console.log(result);
   return result;
-})
+});
+
+
+export async function pause(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export const streamMultipleDatabaseThingsArbitrarily = server$(async function* () {
+  const connectionString = this.env.get("DATABASE_URL");
+  if (!connectionString) {
+    throw new Error("Missing DATABASE_URL environment variable");
+  }
+  const pool = new Pool({ connectionString });
+  const db = drizzle(pool as NeonClient);
+  for (let i = 0; i < 10; i++) {
+    const result = await db.select().from(books).execute();
+    yield {
+      serverTime: Date.now(),
+      dbResult: result
+    };
+    await pause(1000);
+  }
+});
 
 export default component$(() => {
+  const dbResultsDisplay = useSignal("");
+
+  useVisibleTask$(({cleanup})=> { 
+    const abortController = new AbortController();
+    streamMultipleDatabaseThingsArbitrarily(abortController.signal).then(async (stream)=> { 
+        for await (const output of stream) {
+          console.log(output);
+          dbResultsDisplay.value = JSON.stringify({ 
+            time: output.serverTime,
+            result: output.dbResult
+          });
+        }
+    });
+
+    cleanup(()=> abortController.abort())
+  })
+
   return (
     <>
       <Hero />
       <button onClick$={() => doDatabaseThing().then(console.log)}>
         Do the database thing
       </button>
+
+      <div>
+        {`Streamed DB stuff:`}
+        <p>{dbResultsDisplay.value}</p>
+      </div>
+
       <Starter />
 
       <div role="presentation" class="ellipsis"></div>

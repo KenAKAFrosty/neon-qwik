@@ -1,15 +1,31 @@
 import { component$ } from "@builder.io/qwik";
-import type { DocumentHead } from "@builder.io/qwik-city";
-
+import { server$, type DocumentHead } from "@builder.io/qwik-city";
 import Counter from "~/components/starter/counter/counter";
 import Hero from "~/components/starter/hero/hero";
 import Infobox from "~/components/starter/infobox/infobox";
 import Starter from "~/components/starter/next-steps/next-steps";
 
+import { neon } from "@neondatabase/serverless"
+
+
+export const doDatabaseThing = server$(async function () {
+  const dbUrl = this.env.get("DATABASE_URL");
+  if (!dbUrl) {
+    throw new Error("Missing DATABASE_URL environment variable");
+  }
+  const sql = neon(dbUrl);
+  const result = await sql`SELECT * FROM Books`;
+  console.log(result);
+  return result;
+})
+
 export default component$(() => {
   return (
     <>
       <Hero />
+      <button onClick$={() => doDatabaseThing().then(console.log)}>
+        Add a record for funsies
+      </button>
       <Starter />
 
       <div role="presentation" class="ellipsis"></div>
@@ -25,7 +41,7 @@ export default component$(() => {
 
       <div class="container container-flex">
         <Infobox>
-          <div q:slot="title" class="icon icon-cli">
+          <div q: slot="title" class="icon icon-cli">
             CLI Commands
           </div>
           <>
@@ -54,7 +70,7 @@ export default component$(() => {
 
         <div>
           <Infobox>
-            <div q:slot="title" class="icon icon-apps">
+            <div q: slot="title" class="icon icon-apps">
               Example Apps
             </div>
             <p>
@@ -64,7 +80,7 @@ export default component$(() => {
           </Infobox>
 
           <Infobox>
-            <div q:slot="title" class="icon icon-community">
+            <div q: slot="title" class="icon icon-community">
               Community
             </div>
             <ul>
